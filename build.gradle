@@ -1,0 +1,16 @@
+group 'info.noconfuse'
+version '0.1.0'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compile('org.apache.curator:curator-framework:2.11.0')
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
