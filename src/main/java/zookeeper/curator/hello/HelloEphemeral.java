@@ -1,6 +1,5 @@
-package zookeeper.curator;
+package zookeeper.curator.hello;
 
-import com.sun.jndi.ldap.Connection;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;

@@ -1,4 +1,4 @@
-package zookeeper.curator;
+package zookeeper.curator.hello;
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
