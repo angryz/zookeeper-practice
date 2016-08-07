@@ -10,6 +10,8 @@ import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.concurrent.CountDownLatch;
+
 /**
  * Created by zzp on 8/2/16.
  */
@@ -52,6 +54,8 @@ public class HelloListener {
     }
 
     private static class Consumer implements Runnable {
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
         @Override
         public void run() {
             CuratorFramework client = CuratorFrameworkFactory.builder()
@@ -73,6 +77,8 @@ public class HelloListener {
                 Stat stat = client.checkExists().forPath(FOOBAR_EPHE1);
                 System.out.println(Thread.currentThread().getName() + " | Exists : " + (stat != null));
                 if (stat != null) {
+                    client.getChildren().watched().forPath("/foobar");
+
                     // setting sync
                     client.setData().forPath(FOOBAR_EPHE1, "abc".getBytes("UTF-8"));
                     Thread.sleep(100);
@@ -82,13 +88,11 @@ public class HelloListener {
                         @Override
                         public void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
                             System.out.println("ProcessResult: " + eventToString(event));
+                            countDownLatch.countDown();
                         }
                     }).forPath(FOOBAR_EPHE1, "abc".getBytes("UTF-8"));
-                    Thread.sleep(100);
-
-                    client.getChildren().watched().forPath("/foobar");
                 }
-                Thread.sleep(3000);
+                countDownLatch.await();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
