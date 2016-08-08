@@ -3,20 +3,18 @@ package zookeeper.curator.hello;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.recipes.cache.NodeCache;
+import org.apache.curator.framework.recipes.cache.NodeCacheListener;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.utils.CloseableUtils;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.zookeeper.CreateMode;
 
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by zzp on 8/7/16.
+ * Created by zzp on 8/8/16.
  */
-public class HelloCache {
+public class HelloNodeCache {
 
     static final RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(1000, 3000, 3);
     public static final String FOOBAR_CACHE = "/foobar/cache";
@@ -49,15 +47,6 @@ public class HelloCache {
                 System.out.println(Thread.currentThread().getName() + " | update node 'first'");
                 client.setData().forPath(path, "world".getBytes());
                 Thread.sleep(1500);
-
-                path = ZKPaths.makePath(path, "second");
-                System.out.println(Thread.currentThread().getName() + " | create node 'second'");
-                client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(path, "222".getBytes());
-                Thread.sleep(1500);
-
-                System.out.println(Thread.currentThread().getName() + " | update node 'second'");
-                client.setData().forPath(path, "666".getBytes());
-                Thread.sleep(1500);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -80,43 +69,28 @@ public class HelloCache {
                     .build();
             client.start();
 
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+            }
             String first = ZKPaths.makePath(FOOBAR_CACHE, "first");
-            PathChildrenCache cache = new PathChildrenCache(client, FOOBAR_CACHE, true);
-            PathChildrenCacheListener listener = new PathChildrenCacheListener() {
+            NodeCache cache = new NodeCache(client, first);
+            NodeCacheListener listener = new NodeCacheListener() {
                 @Override
-                public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                    System.out.println(" - Event: " + event.toString());
-                    switch (event.getType()) {
-                        case CHILD_ADDED:
-                            System.out.println("  - Node added: " + event.getData().getPath());
-                            System.out.println("  - Node value: " + new String(event.getData().getData()));
-                            if (event.getData().getPath().equals(first)) {
-                                PathChildrenCache cache1 = new PathChildrenCache(client, first, true);
-                                cache1.getListenable().addListener(this);
-                                cache1.start();
-                            }
-                            break;
-                        case CHILD_UPDATED:
-                            System.out.println("  - Node updated: " + event.getData().getPath());
-                            System.out.println("  - Node value: " + new String(event.getData().getData()));
-                            break;
-                        case CHILD_REMOVED:
-                            System.out.println("  - Node removed: " + event.getData().getPath());
-                            break;
-                    }
+                public void nodeChanged() throws Exception {
+                    String path = cache.getCurrentData().getPath();
+                    String data = new String(cache.getCurrentData().getData());
+                    System.out.println("Node '" + path + "' changed, " + data);
                 }
             };
             cache.getListenable().addListener(listener);
-
             try {
                 cache.start();
-
-                Thread.sleep(3000);
-                System.out.println(Thread.currentThread().getName() + " | " + new String(cache.getCurrentData(first).getData()));
 
                 countDownLatch.await();
 
                 client.delete().deletingChildrenIfNeeded().forPath(FOOBAR_CACHE);
+                Thread.sleep(1000);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -125,5 +99,4 @@ public class HelloCache {
             }
         }
     }
-
 }
