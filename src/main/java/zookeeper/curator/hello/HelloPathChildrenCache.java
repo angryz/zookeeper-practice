@@ -3,6 +3,7 @@ package zookeeper.curator.hello;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -58,6 +59,10 @@ public class HelloPathChildrenCache {
                 System.out.println(Thread.currentThread().getName() + " | update node 'second'");
                 client.setData().forPath(path, "666".getBytes());
                 Thread.sleep(1500);
+
+                path = ZKPaths.makePath(FOOBAR_CACHE, "third");
+                System.out.println(Thread.currentThread().getName() + " | create node 'third'");
+                client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(path, "hahaha".getBytes());
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -85,7 +90,7 @@ public class HelloPathChildrenCache {
             PathChildrenCacheListener listener = new PathChildrenCacheListener() {
                 @Override
                 public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                    System.out.println(" - Event: " + event.toString());
+                    //System.out.println(" - Event: " + event.toString());
                     switch (event.getType()) {
                         case CHILD_ADDED:
                             System.out.println("  - Node added: " + event.getData().getPath());
@@ -104,6 +109,10 @@ public class HelloPathChildrenCache {
                             System.out.println("  - Node removed: " + event.getData().getPath());
                             break;
                     }
+                    for (ChildData childData : cache.getCurrentData()) {
+                        System.out.println("      Child: " + childData.getPath() + " | " + new String(childData.getData()));
+                    }
+
                 }
             };
             cache.getListenable().addListener(listener);
@@ -112,7 +121,6 @@ public class HelloPathChildrenCache {
                 cache.start();
 
                 Thread.sleep(3000);
-                System.out.println(Thread.currentThread().getName() + " | " + new String(cache.getCurrentData(first).getData()));
 
                 countDownLatch.await();
 
